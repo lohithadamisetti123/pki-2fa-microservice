@@ -28,10 +28,15 @@ COPY student_private.pem .
 COPY student_public.pem .
 COPY instructor_public.pem .
 
-RUN chmod 0644 cron/2fa-cron && crontab cron/2fa-cron
+# Setup cron with proper configuration
+RUN mkdir -p /var/spool/cron/crontabs && \
+    chmod 0644 cron/2fa-cron && \
+    crontab cron/2fa-cron
 
+# Create volume mount points
 RUN mkdir -p /data /cron && chmod 755 /data /cron
 
 EXPOSE 8080
 
-CMD ["sh", "-c", "cron && uvicorn app:app --host 0.0.0.0 --port 8080"]
+# Use a wrapper script to start both cron and the application
+CMD ["/bin/sh", "-c", "cron && uvicorn app:app --host 0.0.0.0 --port 8080"]
