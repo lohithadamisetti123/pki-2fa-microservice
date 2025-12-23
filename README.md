@@ -25,3 +25,5 @@ A secure, containerized microservice demonstrating enterprise-grade security pra
 - `POST /decrypt-seed` - Decrypt encrypted seed
 - `GET /generate-2fa` - Generate current TOTP code
 - `POST /verify-2fa` - Verify TOTP code
+
+
