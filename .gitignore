@@ -18,11 +18,11 @@ build/
 .idea/
 *.swp
 *.swo
-*~
 
 # OS files
 .DS_Store
 Thumbs.db
-SUBMISSION_DATA.txt
-commit_hash.txt
-commit_proof.txt
+
+# Docker volumes (local only)
+data/
+cron/last_code.txt

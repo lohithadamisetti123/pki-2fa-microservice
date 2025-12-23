@@ -3,40 +3,48 @@ FROM python:3.11-slim as builder
 
 WORKDIR /app
 
+# Copy requirements and install dependencies
 COPY requirements.txt .
-RUN apt-get update && apt-get install -y gcc libffi-dev libssl-dev python3-dev && rm -rf /var/lib/apt/lists/* && \
-    pip install --user --no-cache-dir -r requirements.txt
+RUN pip install --user --no-cache-dir -r requirements.txt
 
 # Stage 2: Runtime
 FROM python:3.11-slim
 
+# Set timezone to UTC
 ENV TZ=UTC
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y cron tzdata && apt-get clean && rm -rf /var/lib/apt/lists/* && \
-    ln -fs /usr/share/zoneinfo/UTC /etc/localtime && \
-    dpkg-reconfigure -f noninteractive tzdata
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    cron \
+    tzdata \
+    && rm -rf /var/lib/apt/lists/*
 
+# Configure timezone
+RUN ln -snf /usr/share/zoneinfo/UTC /etc/localtime && echo UTC > /etc/timezone
+
+# Copy Python dependencies from builder
 COPY --from=builder /root/.local /root/.local
 ENV PATH=/root/.local/bin:$PATH
 
+# Copy application code
 COPY app.py .
-COPY scripts/ scripts/
-COPY cron/ cron/
-COPY student_private.pem .
-COPY student_public.pem .
-COPY instructor_public.pem .
-
-# Setup cron with proper configuration
-RUN mkdir -p /var/spool/cron/crontabs && \
-    chmod 0644 cron/2fa-cron && \
-    crontab cron/2fa-cron
+COPY scripts/ ./scripts/
+COPY cron/ ./cron/
 
 # Create volume mount points
 RUN mkdir -p /data /cron && chmod 755 /data /cron
 
+# Install cron job
+RUN chmod 0644 ./cron/2fa-cron && \
+    crontab ./cron/2fa-cron
+
+# Make scripts executable
+RUN chmod +x ./scripts/*.py
+
+# Expose port
 EXPOSE 8080
 
-# Use a wrapper script to start both cron and the application
-CMD ["/bin/sh", "-c", "cron && uvicorn app:app --host 0.0.0.0 --port 8080"]
+# Start cron and API server
+CMD ["sh", "-c", "cron && python app.py"]
